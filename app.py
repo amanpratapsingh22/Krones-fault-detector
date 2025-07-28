@@ -6,9 +6,14 @@ import os
 
 app = Flask(__name__)
 
-# Load models
+# Define static and model paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "krones_palletizer_models.pkl")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# Load models safely
 try:
-    models = joblib.load("krones_palletizer_models.pkl")
+    models = joblib.load(MODEL_PATH)
     print("✅ Available keys in model file:", models.keys())
     model_status = models['model_status']
     model_error = models['model_code']
@@ -17,7 +22,7 @@ except Exception as e:
     model_status = None
     model_error = None
 
-# Embedded error code to description dictionary (no CSV needed)
+# Error code to description mapping
 error_map = {
     'E101': 'Motor overload',
     'E102': 'High temperature',
@@ -29,9 +34,10 @@ error_map = {
     'E108': 'Mechanical jam',
     'E109': 'Cooling system failure',
     'E110': 'Unknown system error'
-    # Add more as needed
+    # Add more if needed
 }
 
+# Expected features
 features = ['Temp (°C)', 'Load (%)', 'Duration (min)']
 
 @app.route('/', methods=['GET', 'POST'])
@@ -42,14 +48,14 @@ def index():
             if model_status is None or model_error is None:
                 raise Exception("Model not loaded properly. Check model keys or file.")
 
-            # Collect input
+            # Get input values
             temp = float(request.form['temp'])
             load = float(request.form['load'])
             duration = float(request.form['duration'])
 
             input_data = pd.DataFrame([[temp, load, duration]], columns=features)
 
-            # Predict
+            # Make predictions
             status = model_status.predict(input_data)[0]
 
             if status == 1:
@@ -60,8 +66,8 @@ def index():
                 code = "None"
                 description = "✅ Machine is operating normally"
 
-            # Generate graph
-            chart_path = os.path.join("static", "chart.png")
+            # Create bar chart
+            chart_path = os.path.join(STATIC_DIR, "chart.png")
             plt.figure(figsize=(4, 2))
             plt.bar(['Temp', 'Load', 'Duration'], [temp, load, duration], color=['orange', 'green', 'blue'])
             plt.ylim(0, 100)
@@ -87,5 +93,5 @@ def index():
 
     return render_template("index.html", result=result)
 
-if __name__== '__main__':
+if __name__ == '__main__':
     app.run(debug=True)
