@@ -1,0 +1,6 @@
+Error Code,Error Description
+101,Motor overload
+102,Temperature high
+103,Sensor failure
+104,Emergency stop triggered
+105,Air pressure low
